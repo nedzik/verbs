@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.eggs/
+*.egg-info/
+dist/
+build/
+develop-eggs/
+parts/
+sdist/
+wheels/
+.venv/
+venv/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environments
+.env
+.venv
+venv/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# dotenv
+.env
+
+# private data
+data/
