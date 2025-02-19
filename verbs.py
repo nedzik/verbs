@@ -22,6 +22,7 @@ def flatten(dictionary, parent_key='', separator=' '):
 class Verbs:
     def __init__(self):
         self.path = Path() / 'data' / 'raw'
+        self.path.mkdir(parents=True, exist_ok=True)
         verbs = sorted([x.parts[-1].split('.')[0] for x in self.path.iterdir() if x.is_file()])
         self.verbs_dropdown = widgets.Dropdown(options=verbs, value=None)
         self.quiz_label = widgets.Label(value='Pick a verb to start ...')
