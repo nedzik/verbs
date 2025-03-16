@@ -1,24 +1,12 @@
 #!/usr/bin/env python
 
 import json
-from collections.abc import MutableMapping
 from pathlib import Path
 
 import ipywidgets as widgets
 from IPython.display import display
 
-from quiz import Quiz
-
-
-def flatten(dictionary, parent_key='', separator=' '):
-    items = []
-    for key, value in dictionary.items():
-        new_key = parent_key + separator + key if parent_key else key
-        if isinstance(value, MutableMapping):
-            items.extend(flatten(value, new_key, separator=separator).items())
-        else:
-            items.append((new_key, value))
-    return dict(items)
+from quiz import SingleVerbChallenge, Quiz
 
 
 class Verbs:
@@ -38,20 +26,19 @@ class Verbs:
         self.answers_dropdown = widgets.Dropdown(options=initial_answers, disabled=True, value=None)
         self.next_button = widgets.Button(description='Next', disabled=True)
         self.progress_bar = widgets.IntProgress(value=0, min=0, max=10, step=1, bar_style='success')
-        self.quiz = None
-        self.current_answer = None
-        self.error_count = 0
+        self.single_verb_challenge: SingleVerbChallenge|None = None
         self.verbs_dropdown.observe(self.__verbs_dropdown_handler, names='value')
         self.answers_dropdown.observe(self.__answers_radio_buttons_handler, names='value')
         self.next_button.on_click(self.__next_button_handler)
 
-    def next_question(self):
-        self.current_answer, options = next(self.quiz.quiz_iterator, (None, []))
+    def next_question(self, advance=True):
+        if advance: self.single_verb_challenge.advance_to_next_quiz()
+        current_quiz: Quiz = self.single_verb_challenge.get_current_quiz()
         self.answers_dropdown.value = None
         self.next_button.disabled = True
-        if self.current_answer:
-            self.quiz_label.value = self.current_answer
-            self.answers_dropdown.options = options
+        if current_quiz:
+            self.quiz_label.value = current_quiz.question
+            self.answers_dropdown.options = current_quiz.answer_choices
             self.answers_dropdown.disabled = False
         else:
             self.quiz_label.value = Verbs.DEFAULT_QUIZ_LABEL
@@ -60,28 +47,28 @@ class Verbs:
 
     def __verbs_dropdown_handler(self, change: dict):
         with open(self.path / f'{change["new"]}.json') as fp: 
-            self.quiz = Quiz(flatten(json.load(fp)), self.focus)
+            self.single_verb_challenge = SingleVerbChallenge(json.load(fp), self.focus)
+            self.single_verb_challenge.start()
             self.progress_bar.value = 0
             self.progress_bar.bar_style = 'success'
-            self.progress_bar.max = self.quiz.size
+            self.progress_bar.max = self.single_verb_challenge.size
             self.quiz_label.value = Verbs.DEFAULT_QUIZ_LABEL
-        self.next_question()
+        self.next_question(False)
 
     def __answers_radio_buttons_handler(self, change: dict):
         if not self.answers_dropdown.disabled:
             self.answers_dropdown.disabled = True
-            value = change['new']
-            if value == self.quiz.verb[self.current_answer]:
+            if self.single_verb_challenge.get_current_quiz().answer(change['new']):
                 self.answer_label.value = ' - Correct!!!'
                 self.answer_label.style.text_color = 'green'
             else:
-                self.answer_label.value = f'- Incorrect!!! {self.quiz.verb[self.current_answer]}'
+                correct_answer = self.single_verb_challenge.get_current_quiz().correct_answer
+                self.answer_label.value = f'- Incorrect!!! {correct_answer}'
                 self.answer_label.style.text_color = 'red'
-                self.error_count += 1
             self.progress_bar.value += 1
-            if 0 < self.error_count <= 1:
+            if 0 < self.single_verb_challenge.get_error_count() <= 1:
                 self.progress_bar.bar_style = 'warning'
-            if self.error_count > 2:
+            if self.single_verb_challenge.get_error_count() > 2:
                 self.progress_bar.bar_style = 'danger'
             self.next_button.disabled = False
 
@@ -105,5 +92,3 @@ class Verbs:
             self.next_button,
             self.progress_bar
         ]))
-
-    
